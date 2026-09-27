@@ -140,8 +140,8 @@ segundo-cerebro-kit/
 
 ```bash
 git clone https://github.com/danishiota10-code/segundo-cerebro-kit.git meu-vault
-cd meu-vault && git remote remove origin
 cd meu-vault
+git remote remove origin
 ```
 
 ### Passo 2 — Abra como vault no Obsidian
