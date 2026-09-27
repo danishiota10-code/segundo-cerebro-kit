@@ -1,0 +1,793 @@
+---
+description: Configura o AI OS para você — escolhe modo (solo ou empresa), pergunta sobre agente, importa contexto de outra IA, faz 8 perguntas, busca contexto de links/arquivos e preenche o vault com dados reais
+---
+
+# Setup — Personalização do AI OS
+
+Você vai configurar o vault em 7 fases. Execute em ordem. Não pule fases.
+
+---
+
+## Idioma / Language
+
+Detecte o idioma da mensagem que invocou esse comando (a mensagem do usuário que disparou `/setup`) e use esse idioma em TODOS os textos visíveis: mensagem de boas-vindas, `question` e `header` do AskUserQuestion, cada `label` e `description` das opções, mensagens de status, e a confirmação final.
+
+- Mensagem em português → PT-BR (padrão deste programa).
+- Mensagem em inglês → traduza todas as perguntas, headers, labels e descriptions para inglês equivalente.
+- Mensagem em espanhol → traduza para espanhol.
+- Idioma ambíguo → PT-BR.
+
+A audiência principal é Brasil, então PT-BR é o default. Mas se alguém rodar em outra língua, adapte por respeito. Conteúdo de arquivos (`02 Context/me.md`, frontmatter, `01 Daily/`, nomes de pasta) permanece como está no template — não traduza paths, chaves de frontmatter, nem nomes de arquivo.
+
+Aceite respostas do usuário por intenção, não por string exata. Se ele responder em outro idioma do que a pergunta, continue na língua dele.
+
+---
+
+## Fase 1 — Boas-vindas
+
+Antes de qualquer pergunta, envie esta mensagem curta:
+
+> "Bem-vindo. Vou configurar seu AI OS em alguns passos rápidos:
+> 1. Saber se você é solo ou empresa (muda a estrutura)
+> 2. Decidir se você quer um agente IA persistente
+> 3. Importar contexto de outra IA (opcional)
+> 4. 8 perguntas curtas
+> 5. Buscar mais contexto de um link ou arquivo (opcional)
+>
+> Pode responder 'pular' em qualquer pergunta. Vamos."
+
+---
+
+## Fase 2 — Modo: Solo ou Empresa
+
+**Esta é a primeira pergunta real e a mais importante** — ela define toda a estrutura do vault.
+
+Pergunta via AskUserQuestion:
+
+- Pergunta: "Você é uma pessoa individual ou está montando isso para uma empresa / time?"
+- Header: `Modo`
+- Opções:
+  - `Solo — profissional individual (Recomendado)` — "Mistura trabalho e pessoal. Ideal pra solopreneurs, freelancers, consultores, criadores, profissionais CLT."
+  - `Empresa — time / organização` — "Estrutura organizacional com departamentos, processos, stakeholders. Ideal pra times e empresas."
+
+Guarde a resposta como `modo: solo | empresa`.
+
+Aceite qualquer sinal claro: "solo", "individual", "freelancer", "profissional" → `solo`. "empresa", "time", "negócio", "organização", "agência" → `empresa`. Ambíguo ou pulou → `solo` (padrão).
+
+**Este valor afeta todas as fases seguintes:**
+- Fase 4 (import de outra IA): prompt customizado pra perfil pessoal vs empresarial
+- Fase 5 (8 perguntas): perguntas reformuladas pra contexto pessoal vs empresarial
+- Fase 7 (construção): folders, templates e arquivos diferentes pra cada modo
+
+---
+
+## Fase 3 — Agente IA
+
+### 3.1 — Quer agente?
+
+Pergunta via AskUserQuestion:
+
+- Pergunta: "Quer um agente IA persistente neste vault? Ele aprende seu contexto, salva notas automaticamente, gerencia sessões e roda revisões diárias/semanais."
+- Header: `Agente IA`
+- Opções:
+  - `Sim — agente completo (Recomendado)` — "Configura o agente completo com personalização profunda, hooks e automações."
+  - `Não — só estrutura de pastas` — "Cria a estrutura de pastas sem agente persistente."
+
+Guarde a resposta como `agente: sim | nao`.
+
+**Se `agente: nao`:** pule direto pra Fase 7 (Construção). Não faça as Fases 3.2, 4, 5 e 6. Crie só a estrutura base e o `me.md` (modo solo) ou `operator.md` + `organization.md` (modo empresa) em branco. Avise no final que o usuário pode rodar `/setup` de novo a qualquer momento pra adicionar o agente.
+
+**Se `agente: sim`:** continue pra 3.2.
+
+### 3.2 — Nome do agente
+
+Pergunta via AskUserQuestion (só se `agente: sim`):
+
+- Pergunta: "Que nome você quer dar pro seu agente? Algo pessoal tipo 'JARVIS', 'Atlas', 'Sofia' ou o nome que você quiser. Esse nome aparece no hub do seu vault e nos logs de sessão."
+- Header: `Nome do agente`
+- Opções:
+  - `JARVIS` — "Clássico Tony Stark. Padrão se você não quiser pensar."
+  - `Atlas` — "Sugestão neutra, sólida."
+  - `Sofia` — "Sugestão em PT-BR."
+  - `Outro nome — vou dizer` — "Você define."
+  - `Manter como Claude` — "Sem apelido — usa só 'Claude'."
+
+Guarde a resposta como `nome_ia`. Se o usuário escolher "Outro nome", aguarde ele responder com o nome e use exatamente como ele escreveu.
+
+Default (se pular ou ambíguo): `Claude`.
+
+Esse nome será usado em:
+- Arquivo hub `{{nome_ia}}.md` na raiz do vault (Fase 7)
+- Confirmação final do setup
+- Identidade do agente nas sessões futuras
+
+Continue pra Fase 4.
+
+---
+
+## Fase 4 — Importar contexto de outra IA
+
+> ⚠️ **ANTES DE COMEÇAR ESTA FASE:** confirme internamente qual `modo` foi capturado na Fase 2 (`solo` ou `empresa`). Os templates de prompt abaixo têm duas versões — use a que bate com o modo. Não misture.
+
+Pergunta via AskUserQuestion:
+
+- Pergunta: "Você já usa outra IA hoje (ChatGPT, Claude, Gemini, Perplexity)? Posso te dar um prompt pra ela mandar tudo que sabe sobre {{você OU sua empresa, conforme modo}} — você cola a resposta de volta aqui e eu preencho seu vault com profundidade real, em vez de só placeholders."
+- Header: `Contexto IA`
+- Opções:
+  - `Sim — uso ChatGPT` — "Gera prompt otimizado pra memória do ChatGPT."
+  - `Sim — uso Claude` — "Gera prompt otimizado pro Claude (claude.ai)."
+  - `Sim — uso Gemini` — "Gera prompt otimizado pro Gemini."
+  - `Sim — outra IA` — "Gera prompt genérico que funciona em qualquer IA."
+  - `Não — pular este passo` — "Continua com as 8 perguntas."
+
+**Se sim:** imprima o prompt apropriado (veja templates abaixo) num bloco de código markdown. O prompt MUDA baseado no `modo`. Diga ao usuário pra:
+1. Copiar o prompt
+2. Colar na conversa com a IA escolhida
+3. Esperar a resposta
+4. Colar a resposta inteira de volta aqui
+
+Aguarde a resposta do usuário. Quando ele colar, parseie em silêncio (não comente) e guarde os dados extraídos numa variável interna `contexto_ia` que vai ser usada na Fase 7.
+
+Depois do parse, faça as 8 perguntas da Fase 5 mesmo assim — algumas IAs não têm tudo, e perguntas diretas confirmam dados conflitantes.
+
+**Se não:** vá direto pra Fase 5.
+
+### Templates de prompt — Modo SOLO
+
+**Para ChatGPT (modo solo):**
+
+```
+Vou configurar um sistema de IA pessoal em outra ferramenta. Por favor, me devolva tudo que você sabe sobre mim, baseado nas nossas conversas anteriores e na sua memória. Organize em markdown, nesta estrutura exata:
+
+## 1. Identidade
+Nome, idade (se sabe), localização, contexto pessoal relevante.
+
+## 2. Profissão
+Cargo atual, empresa, setor, há quanto tempo, principais responsabilidades, clientes ou stakeholders.
+
+## 3. Objetivos
+Curto prazo (90 dias), médio (1 ano), longo (3-5 anos). Se não souber algum prazo, fale "sem dados".
+
+## 4. Como trabalho
+Rotina, ferramentas que uso (Notion, Linear, Slack, etc.), estilo, preferências, horários produtivos.
+
+## 5. Minha voz
+Como escrevo, palavras que uso, palavras que evito, tom (formal/casual/técnico), referências de estilo.
+
+## 6. Audiência
+Quem eu atendo profissionalmente, quem é meu público se eu crio conteúdo, perfil dessas pessoas.
+
+## 7. Canais
+Onde publico ou me comunico (LinkedIn, Instagram, YouTube, newsletter, blog, etc.). Frequência e foco de cada canal.
+
+## 8. Desafios atuais
+O que está me preocupando, onde estou travado, principais dores ou bloqueios.
+
+## 9. Histórico relevante
+Decisões importantes que tomei, projetos que importam, aprendizados marcantes.
+
+## 10. Rede
+Pessoas importantes na minha vida profissional (mentores, parceiros, colaboradores frequentes).
+
+## 11. Recursos
+Livros, criadores, frameworks, ferramentas que sigo ou uso de referência.
+
+Regras:
+- Se você não tem informação sobre algum item, escreva "sem dados" — NÃO invente.
+- Seja conciso. Bullet points, não parágrafos longos.
+- Inclua datas quando souber.
+- Devolve só o markdown, sem comentários extras antes ou depois.
+```
+
+**Para Claude (modo solo):**
+
+Mesmo prompt acima, com regra adicional:
+```
+Adicional: Baseado em tudo que você sabe sobre mim NESTA conversa (e qualquer contexto que eu colei antes). Se eu não compartilhei informação sobre algum item nesta conversa, escreva "sem dados".
+```
+
+**Para Gemini (modo solo):**
+
+Mesmo prompt do ChatGPT, com adição:
+```
+Se você usa o Gemini integrado ao Google Workspace, pode também buscar contexto dos meus emails, docs e drive recentes pra enriquecer a resposta. Se fizer isso, marque claramente quais informações vieram de onde.
+```
+
+### Templates de prompt — Modo EMPRESA
+
+**Para ChatGPT (modo empresa):**
+
+```
+Vou configurar um sistema de IA pra minha empresa em outra ferramenta. Por favor, me devolva tudo que você sabe sobre a empresa e sobre mim como operador, baseado nas nossas conversas anteriores e na sua memória. Organize em markdown, nesta estrutura exata:
+
+## 1. Operador (eu)
+Meu nome, cargo na empresa, há quanto tempo, principais responsabilidades, estilo de liderança.
+
+## 2. A empresa
+Nome, setor, modelo de negócio, ano de fundação se souber, sede / cidade, faturamento ou porte se compartilhado.
+
+## 3. Produto / serviço
+O que a empresa vende, formato (SaaS, serviço, produto físico, agência), proposta de valor.
+
+## 4. Time
+Tamanho do time, principais cargos / departamentos, estrutura (remoto, híbrido, presencial).
+
+## 5. Objetivos da empresa
+Curto prazo (90 dias), médio (1 ano), longo (3-5 anos). Se não souber algum prazo, fale "sem dados".
+
+## 6. Como a empresa trabalha
+Stack de ferramentas (CRM, comunicação, projeto, etc.), processos principais, rituais (standups, all-hands, etc.).
+
+## 7. Voz da marca
+Como a empresa se comunica, tom (formal/casual/técnico), palavras-chave, palavras a evitar, referências.
+
+## 8. Cliente ideal (ICP)
+Quem a empresa atende, perfil dessas pessoas / empresas, dor que resolve, ticket médio.
+
+## 9. Canais de mercado
+Onde a empresa se comunica (LinkedIn corporativo, blog, eventos, ads, etc.). Frequência e foco.
+
+## 10. Desafios atuais do negócio
+Onde a empresa está travada, principais bloqueios, decisões em aberto.
+
+## 11. Histórico relevante
+Marcos importantes, decisões críticas, pivots, aprendizados.
+
+## 12. Stakeholders / parceiros
+Investidores, advisors, parceiros estratégicos, fornecedores críticos.
+
+## 13. Recursos e referências
+Frameworks que a empresa usa, livros / autores referência, concorrentes que monitora.
+
+Regras:
+- Se você não tem informação sobre algum item, escreva "sem dados" — NÃO invente.
+- Seja conciso. Bullet points, não parágrafos longos.
+- Inclua datas quando souber.
+- Devolve só o markdown, sem comentários extras antes ou depois.
+```
+
+**Para Claude (modo empresa):**
+
+Mesmo prompt empresa acima, com nota: "Baseado em tudo que você sabe sobre a empresa NESTA conversa."
+
+**Para Gemini (modo empresa):**
+
+Mesmo prompt empresa, com adição:
+```
+Se você usa o Gemini integrado ao Google Workspace, pode também buscar contexto de docs internos, emails corporativos, e drive da empresa pra enriquecer. Marque a origem.
+```
+
+### Parse da resposta
+
+Quando o usuário colar a resposta, identifique cada bloco (`## 1.`, `## 2.`, etc.) e extraia os dados estruturados. Não comente publicamente, só processe.
+
+Guarde em memória interna numa estrutura tipo:
+```
+contexto_ia = {
+  "1_identidade": "...",       // solo: nome, cidade. empresa: nome empresa, sede.
+  "2_profissao": "...",        // solo: cargo. empresa: a empresa em si.
+  "3_objetivos": "...",        // 90d / 1y / 3-5y
+  "4_como_trabalho": "...",    // ferramentas, rotina
+  "5_voz": "...",              // voz solo / voz da marca
+  "6_audiencia": "...",        // audiência / ICP
+  "7_canais": "...",
+  "8_desafios": "...",
+  // ... etc até bloco 11 (solo) ou 13 (empresa)
+}
+```
+
+Para cada bloco, marque como `tem_dado: true` se a IA preencheu com conteúdo substantivo, ou `tem_dado: false` se devolveu "sem dados" ou ficou vazio.
+
+**Esses dados drive a Fase 5 — não pergunte de novo o que a IA já entregou.**
+
+---
+
+## Fase 5 — 8 perguntas (smart-skip baseado em `contexto_ia`)
+
+> ⚠️ **ANTES DE COMEÇAR ESTA FASE:** confirme internamente qual `modo` foi capturado na Fase 2. Existem 2 versões completas das 8 perguntas — **Versão SOLO** ou **Versão EMPRESA**. Use só uma. NÃO faça 16 perguntas misturando as duas. Se o modo for `solo`, ignore completamente a seção "Versão modo EMPRESA". Se o modo for `empresa`, ignore completamente a seção "Versão modo SOLO".
+
+### Lógica de smart-skip
+
+Antes de cada pergunta P1-P8, **verifique o bloco correspondente em `contexto_ia`** (se a Fase 4 rodou):
+
+```
+Para cada pergunta P{n} (n de 1 a 8):
+
+  bloco = contexto_ia[bloco_correspondente_de_P{n}]
+
+  CASO 1 — bloco tem dado substantivo:
+    Mostre confirmação curta via AskUserQuestion:
+    
+    - Pergunta: "Da outra IA: '{{resumo do que a IA disse, máximo 1 linha}}'. Tá certo?"
+    - Header: mesmo header da pergunta original (ex: `Identidade`, `Profissão`, etc.)
+    - Opções:
+      - `Sim, está certo` — guarda valor da IA, segue pra próxima
+      - `Quase, deixa eu ajustar` — faz a pergunta original (P{n} normal)
+      - `Não, está errado — vou responder` — faz a pergunta original
+
+  CASO 2 — bloco vazio ou "sem dados":
+    Faz a pergunta original P{n} como descrito abaixo.
+
+  CASO 3 — Fase 4 não rodou (usuário pulou import de outra IA):
+    Faz todas as 8 perguntas originais normalmente.
+```
+
+**Mapeamento bloco → pergunta:**
+
+Modo SOLO:
+| Pergunta | Bloco da IA |
+|---|---|
+| P1 (nome + cidade) | Bloco 1 — Identidade |
+| P2 (profissão) | Bloco 2 — Profissão |
+| P3 (meta 90d) | Bloco 3 — Objetivos (curto prazo) |
+| P4 (ferramentas) | Bloco 4 — Como trabalho (ferramentas) |
+| P5 (voz) | Bloco 5 — Minha voz |
+| P6 (audiência) | Bloco 6 — Audiência |
+| P7 (canais) | Bloco 7 — Canais |
+| P8 (dor) | Bloco 8 — Desafios atuais |
+
+Modo EMPRESA:
+| Pergunta | Bloco da IA |
+|---|---|
+| P1 (empresa + sede) | Bloco 2 — A empresa |
+| P2 (produto) | Bloco 3 — Produto / serviço |
+| P3 (meta) | Bloco 5 — Objetivos (curto prazo) |
+| P4 (stack) | Bloco 6 — Como a empresa trabalha (stack) |
+| P5 (voz da marca) | Bloco 7 — Voz da marca |
+| P6 (ICP) | Bloco 8 — Cliente ideal |
+| P7 (canais) | Bloco 9 — Canais de mercado |
+| P8 (dor do negócio) | Bloco 10 — Desafios atuais do negócio |
+
+### Exemplo prático
+
+Se a IA respondeu no Bloco 1 (modo solo): *"Ana Ribeiro, Belo Horizonte, Brasil. Gerente de marketing há 5 anos."*
+
+Em vez de perguntar P1 cego, mostre:
+
+> **Da outra IA:** "Ana Ribeiro, Belo Horizonte, Brasil"
+> **Tá certo?**
+> 1. Sim, está certo
+> 2. Quase, deixa eu ajustar
+> 3. Não, está errado — vou responder
+
+Se ele escolher "Sim", você guarda nome=Ana Ribeiro + cidade=Belo Horizonte e passa direto pra P2.
+
+Se ele escolher "Quase" ou "Não", aí sim você faz a pergunta original.
+
+**Princípio:** confirmar é rápido. Repetir o que a IA já disse é insulto à inteligência do inscrito.
+
+### Pulando totalmente o bloco
+
+Se a IA preencheu TODOS os 8 blocos relevantes com confiança e o usuário confirmou os 8, esta fase termina em 8 confirmações rápidas em vez de 8 perguntas abertas.
+
+Faça uma pergunta por vez (não agrupe). Não comente entre as perguntas. Vá direto pra próxima depois de cada confirmação ou resposta.
+
+**As perguntas mudam dependendo do `modo`. Use a versão correta abaixo.**
+
+### Versão modo SOLO
+
+**P1 — Você**
+- Pergunta: "Qual é o seu nome completo e onde você mora?"
+- Header: `Identidade`
+- Opções: `Só o nome` / `Nome + cidade` / `Nome + cidade + país` / `Pular`
+
+**P2 — O que você faz**
+- Pergunta: "Em uma frase: o que você faz profissionalmente, para quem, e que resultado gera?"
+- Header: `Profissão`
+- Opções: `Sou funcionário CLT` / `Sou freelancer/consultor` / `Tenho meu próprio negócio` / `Pular`
+
+**P3 — Objetivo agora**
+- Pergunta: "Qual é a sua principal meta para os próximos 90 dias?"
+- Header: `Meta`
+- Opções: `Crescer na carreira` / `Lançar algo novo` / `Aumentar renda` / `Pular`
+
+**P4 — Ferramentas**
+- Pergunta: "Quais ferramentas você usa no dia a dia? (ex: Notion, Linear, Slack, Google Workspace...)"
+- Header: `Stack`
+- Opções: `Suite Google` / `Suite Microsoft` / `Notion + Slack` / `Pular`
+
+**P5 — Tom de voz**
+- Pergunta: "Como você se descreve quando escreve? Escolha o que mais combina."
+- Header: `Voz`
+- Opções: `Direto e objetivo` / `Analítico e detalhado` / `Informal e descontraído` / `Pular`
+
+**P6 — Audiência**
+- Pergunta: "Quem é o público que você atende ou para quem você cria conteúdo?"
+- Header: `Audiência`
+- Opções: `Profissionais B2B` / `Consumidor final B2C` / `Outros criadores` / `Empresas / times` / `Pular`
+
+**P7 — Canais**
+- Pergunta: "Onde você publica ou se comunica profissionalmente? (pode ser mais de um — descreve o foco principal)"
+- Header: `Canais`
+- Opções: `LinkedIn` / `Instagram / TikTok` / `YouTube` / `Newsletter / Blog` / `Não publico ainda` / `Pular`
+
+**P8 — Principal dor**
+- Pergunta: "O que mais consome seu tempo ou atenção hoje que você gostaria de automatizar ou simplificar?"
+- Header: `Dor`
+- Opções: `Reuniões e follow-ups` / `Criação de conteúdo` / `Relatórios e análises` / `Vendas e prospecção` / `Pular`
+
+### Versão modo EMPRESA
+
+**P1 — Empresa**
+- Pergunta: "Nome da empresa e onde fica a sede principal?"
+- Header: `Empresa`
+- Opções: `Só o nome` / `Nome + cidade` / `Nome + cidade + país` / `Pular`
+
+**P2 — O que a empresa faz**
+- Pergunta: "Em uma frase: o que a empresa vende, para quem, e que resultado entrega?"
+- Header: `Produto`
+- Opções: `SaaS / produto digital` / `Serviço (agência, consultoria)` / `Produto físico` / `Educação / curso` / `Outro` / `Pular`
+
+**P3 — Meta da empresa**
+- Pergunta: "Qual é a principal meta da empresa para os próximos 90 dias?"
+- Header: `Meta`
+- Opções: `Crescer receita` / `Lançar produto novo` / `Expandir mercado` / `Aumentar eficiência` / `Pular`
+
+**P4 — Stack da empresa**
+- Pergunta: "Quais ferramentas o time usa no dia a dia? (CRM, projeto, comunicação)"
+- Header: `Stack`
+- Opções: `Suite Google + Slack` / `Suite Microsoft + Teams` / `Notion + Linear + Slack` / `HubSpot + Slack` / `Pular`
+
+**P5 — Voz da marca**
+- Pergunta: "Como a marca se comunica? Escolha o que mais combina."
+- Header: `Voz da marca`
+- Opções: `Direta e objetiva (B2B)` / `Técnica e detalhada (especialista)` / `Próxima e calorosa (B2C)` / `Premium / aspiracional` / `Pular`
+
+**P6 — Cliente ideal (ICP)**
+- Pergunta: "Quem é o cliente ideal da empresa? Em 1 frase: perfil + porte + setor."
+- Header: `ICP`
+- Opções: `Empresas B2B` / `Consumidor final B2C` / `Profissionais / freelancers` / `Outras agências / times` / `Pular`
+
+**P7 — Canais da empresa**
+- Pergunta: "Onde a empresa se comunica com mercado? Principal canal."
+- Header: `Canais`
+- Opções: `LinkedIn corporativo` / `Anúncios pagos (Google/Meta)` / `Blog / SEO` / `Eventos / parcerias` / `Pular`
+
+**P8 — Maior dor do negócio**
+- Pergunta: "Qual é o maior gargalo do negócio hoje?"
+- Header: `Dor`
+- Opções: `Geração de demanda` / `Conversão de vendas` / `Operação interna` / `Retenção de cliente` / `Pular`
+
+---
+
+## Fase 6 — Drop de contexto adicional
+
+Pergunta via AskUserQuestion:
+
+- Pergunta: "Última coisa. Posso buscar mais contexto de algum link ou arquivo? {{Se solo: 'LinkedIn, site, Notion público, PDF.' Se empresa: 'Site institucional, deck pra investidor, página About, doc de estratégia.'}}"
+- Header: `Contexto extra`
+- Opções:
+  - `Sim — vou colar um link`
+  - `Sim — tenho um arquivo`
+  - `Não — já é suficiente`
+  - `Pular`
+
+**Se link:** busque com WebFetch. Extraia dados relevantes e combine com `contexto_ia` (Fase 4) + respostas (Fase 5).
+**Se arquivo:** leia com Read.
+**Se não:** prossiga.
+
+---
+
+## Fase 7 — Construção (trabalhe em silêncio)
+
+> ⚠️ **ANTES DE COMEÇAR ESTA FASE:** confirme qual `modo` foi capturado na Fase 2. As seções 7.2, 7.3 e 7.4 abaixo têm caminhos separados pra `solo` vs `empresa` — execute SÓ o caminho do modo capturado. NÃO crie operator.md/organization.md/team.md se for solo. NÃO crie me.md se for empresa.
+
+Combine todas as fontes nesta ordem de prioridade (a mais recente sobrescreve a anterior em caso de conflito):
+1. `contexto_ia` da Fase 4 (base ampla)
+2. Respostas das 8 perguntas da Fase 5 (correção explícita)
+3. Link/arquivo da Fase 6 (enriquecimento)
+
+### 7.0 Sistema operacional e hooks (sempre, antes de tudo)
+
+Detecte o sistema operacional SEM perguntar ao usuário: o seu contexto de ambiente diz a plataforma em que você roda (`win32` = Windows nativo, `darwin` = macOS, `linux` = Linux ou WSL, e WSL conta como Linux).
+
+- **macOS, Linux ou WSL:** nada a fazer, o `.claude/settings.json` do repo já está certo.
+- **Windows nativo (PowerShell):** copie `.claude/settings-windows.json` por cima de `.claude/settings.json`. Obrigatório: o padrão usa `$CLAUDE_PROJECT_DIR`, que é expansão POSIX, vira string vazia no PowerShell, e todo prompt passa a voltar com um erro de Python grudado no fim. Depois rode `python --version`; se só `python3` responder, troque a primeira palavra dos três comandos do arquivo para `python3`. Não reescreva mais nada no comando: o `run_name='__main__'` tem dois underscores de cada lado, e com um só o hook não roda e ainda sai com código 0.
+
+Informe na confirmação final qual sistema foi detectado e qual arquivo de hooks ficou valendo.
+
+### 7.1 Folders base (sempre)
+
+```bash
+mkdir -p "00 Inbox" "01 Daily" "02 Context" "03 Projects" "04 Resources" "05 Archives"
+mkdir -p "03 Intelligence/meetings/team-standups"
+mkdir -p "03 Intelligence/meetings/client-calls"
+mkdir -p "03 Intelligence/meetings/one-on-ones"
+mkdir -p "03 Intelligence/meetings/general"
+mkdir -p "03 Intelligence/competitors"
+mkdir -p "03 Intelligence/market"
+mkdir -p "03 Intelligence/decisions"
+mkdir -p "03 Intelligence/research"
+mkdir -p "03 Intelligence/archive"
+mkdir -p "AIOS/blueprint"
+mkdir -p "knowledge"
+mkdir -p ".claude/hooks"
+```
+
+**Importante:** o repo já vem com `AIOS/`, `knowledge/` e `.claude/hooks/` populados. Os `mkdir -p` acima só garantem que existem se o vault foi clonado num lugar incomum.
+
+### 7.2 — Folders extras se `modo: empresa`
+
+```bash
+mkdir -p "03 Intelligence/meetings/board-reviews"
+mkdir -p "03 Intelligence/meetings/all-hands"
+mkdir -p "03 Intelligence/meetings/cross-team"
+mkdir -p "03 Intelligence/processes"
+mkdir -p "Departments"
+mkdir -p "Teams"
+mkdir -p "Onboarding"
+```
+
+### 7.3 — Arquivo principal de identidade
+
+**Se `modo: solo`:** preencher o template existente `02 Context/me.md` substituindo cada `{{PLACEHOLDER}}` com dados combinados das fontes.
+
+**Se `modo: empresa`:** criar **3 arquivos**:
+
+**A) `02 Context/operator.md`** — você como operador
+
+```markdown
+---
+type: identity
+date: YYYY-MM-DD
+status: active
+tags: [identity, context, operator]
+---
+
+# {{Seu nome}}
+
+> Você é o operador desta empresa. Este arquivo descreve quem você é como decisor.
+
+## Identidade
+- **Nome:** {{nome}}
+- **Cargo:** {{cargo na empresa}}
+- **Tempo no cargo:** {{do contexto_ia ou inferir}}
+- **Localização:** {{cidade}}
+
+## Estilo de liderança
+{{do contexto_ia bloco 1, ou genérico se sem dados}}
+
+## Como eu decido
+{{como você toma decisões — gut, dados, comitê, etc.}}
+
+## Reuniões que faço
+- {{1:1 com diretos, all-hands, board, etc.}}
+
+## Notas para a IA
+- Sempre responda em português do Brasil
+- Quando referir-se à empresa, use `[[organization]]`
+- Quando referir-se ao time, use `[[team]]`
+```
+
+**B) `02 Context/organization.md`** — a empresa
+
+```markdown
+---
+type: identity
+date: YYYY-MM-DD
+status: active
+tags: [identity, context, organization]
+---
+
+# {{Nome da empresa}}
+
+> Este arquivo descreve a empresa: produto, mercado, voz, ICP, canais.
+
+## A empresa
+- **Nome:** {{nome}}
+- **Setor:** {{setor}}
+- **Modelo:** {{SaaS, serviço, produto, etc.}}
+- **Sede:** {{cidade}}
+- **Porte:** {{do contexto_ia ou "sem dados"}}
+
+## Produto / Serviço
+{{do P2 + contexto_ia bloco 3}}
+
+## Cliente ideal (ICP)
+{{do P6 + contexto_ia bloco 8}}
+
+## Proposta de valor
+{{1 frase do que a empresa promete entregar}}
+
+## Voz da marca
+**Tom:** {{do P5}}
+
+**Palavras-chave:** {{do contexto_ia bloco 7}}
+
+**Palavras a evitar:** {{do contexto_ia bloco 7}}
+
+## Canais
+**Principal:** {{do P7}}
+
+**Secundários:** {{do contexto_ia bloco 9}}
+
+## Concorrentes principais
+{{do contexto_ia bloco 13, ou "a definir"}}
+
+## Stakeholders / parceiros
+{{do contexto_ia bloco 12, ou seção vazia removida}}
+```
+
+**C) `02 Context/team.md`** — o time
+
+```markdown
+---
+type: identity
+date: YYYY-MM-DD
+status: active
+tags: [identity, context, team]
+---
+
+# Time — {{Nome da empresa}}
+
+> Estrutura do time e principais pessoas.
+
+## Tamanho
+{{N pessoas, do contexto_ia bloco 4}}
+
+## Estrutura
+{{remoto / híbrido / presencial}}
+
+## Departamentos
+- {{lista do contexto_ia ou criar conforme o time cresce}}
+
+## Pessoas-chave
+{{lista de pessoas relevantes do contexto_ia, com cargo. Se sem dados, deixar vazio.}}
+
+## Rituais
+- {{standups, 1:1, all-hands, etc.}}
+```
+
+### 7.4 — Arquivos opcionais (se houver dado nas fontes)
+
+**Modo SOLO**, criar se houver substância:
+- `02 Context/marca.md` — se o usuário mencionou marca, voz forte, ou criação de conteúdo
+- `02 Context/estrategia.md` — se mencionou objetivos claros ou meta de 90 dias
+
+**Modo EMPRESA**, criar se houver substância:
+- `02 Context/estrategia.md` — sempre criar pra empresa, com metas 90d/1ano/3-5anos
+- `02 Context/processos.md` — se mencionou rituais ou processos no contexto_ia bloco 6
+
+(Estruturas dos arquivos opcionais mesmas da versão anterior do setup — meta 90d, meta 1 ano, etc.)
+
+### 7.5 — Hub do agente (se `agente: sim`)
+
+Crie `{{nome_ia}}.md` na raiz do vault. Esse é o hub de identidade do agente — wikilinks daqui pra todo lugar relevante do vault. Substitua `{{nome_ia}}` pelo valor capturado na Fase 3.2.
+
+```markdown
+---
+type: context
+status: active
+date: YYYY-MM-DD
+tags: [hub, agente, ai-os, identidade]
+---
+
+> [!important] {{nome_ia}} — Camada de Inteligência
+> Agente IA pessoal de {{nome do usuário OU nome da empresa}}. Always on. Always aware. Always building.
+
+{{nome_ia}} opera a partir deste vault — seu AI OS. Não é uma ferramenta. Não é um chatbot. É um segundo cérebro que conhece todo projeto, todo caminho, e toda prioridade.
+
+## Identidade
+
+- **Operador:** {{wikilink pro nome do usuário OU pra organization.md em modo empresa}}
+- **Papel:** Parceiro de execução, segundo cérebro, construtor de sistemas
+- **Modo:** Direto, prático, sem floreio
+
+## Contexto que carrego em toda sessão
+
+- [[02 Context/me|Quem é o usuário]] (modo solo) OU [[02 Context/operator|Operador]] + [[02 Context/organization|Empresa]] (modo empresa)
+- [[02 Context/estrategia|Estratégia e objetivos]] — se existir
+- [[02 Context/marca|Marca e voz]] — se existir
+- [[01 Daily|Último daily]] — o que aconteceu na sessão anterior
+- [[AIOS/index|AIOS]] — skills, mapas, regras
+
+## O que eu gerencio
+
+- [[AIOS/project-map|Projetos ativos]] — tudo sendo construído agora
+- [[03 Intelligence|Intelligence]] — decisões, mercado, concorrentes, pesquisas
+- [[04 Resources|Recursos]] — outputs dos comandos, prompts, frameworks
+- [[knowledge/index|Knowledge hub]] — conhecimento permanente
+
+## Comandos que eu rodo
+
+Operacional: `/setup`, `/assistente`, `/organizar`, `/importar-contexto`
+Escrita: `/escrever`, `/linkedin`, `/newsletter`, `/case-study`
+Web/SEO: `/landing-page`, `/seo-pagina`
+Crescimento: `/email-sequencia`, `/ads-google`, `/pesquisa`
+
+## Como me invocar
+
+Eu sou ativado automaticamente quando você abre o Claude Code neste vault. O hook `SessionStart` injeta meu contexto na abertura da sessão, antes da sua primeira mensagem.
+
+Pra trabalho específico: use os comandos `/` acima.
+Pra conversa direta: só fale comigo normalmente.
+Pra revisão ou retomar: `/assistente`.
+
+---
+
+*Hub criado em {{data}} via `/setup`. Edite este arquivo quando quiser ajustar minha identidade ou papel.*
+```
+
+### 7.6 — Projetos ativos (ambos os modos)
+
+Se houver projetos mencionados:
+- `03 Projects/{slug-do-projeto}/README.md` com overview + status + próximos passos.
+
+### 7.7 — Daily note (ambos os modos)
+
+Cria `01 Daily/YYYY-MM-DD.md`:
+
+```markdown
+---
+type: daily-note
+date: YYYY-MM-DD
+status: active
+tags: [daily, setup]
+---
+
+## Sessão de Setup
+
+- **Modo:** {{solo / empresa}}
+- **Foco:** Configuração inicial do AI OS
+- **Concluído:** Vault personalizado com {{liste fontes: 8 perguntas, contexto_ia, link/arquivo}}
+- **Arquivos criados:** {{liste todos os arquivos criados em 7.3 e 7.4}}
+- **Projetos ativos:** {{liste projetos mencionados, ou "nenhum ainda"}}
+- **Próximos passos:** {{1-2 ações concretas baseadas no objetivo principal}}
+```
+
+### 7.8 — Confirmação
+
+Envie mensagem curta, sem floreio. Adapta ao modo e usa o `nome_ia` se foi capturado.
+
+**Modo SOLO com agente:**
+> "Pronto. Seu vault está rodando em modo **solo** com **{{nome_ia}}** como agente.
+> - `{{nome_ia}}.md` — hub de identidade do seu agente
+> - `02 Context/me.md` — você
+> - {{liste outros arquivos criados}}
+> - `01 Daily/[data].md` — nota do dia
+>
+> Próximo passo: {{1 ação concreta baseada no P3 ou contexto_ia}}.
+>
+> Quando quiser: `/escrever` (post), `/landing-page` (página), `/assistente` (dia a dia). O {{nome_ia}} fica ativo a partir da próxima sessão."
+
+**Modo SOLO sem agente:**
+> "Pronto. Estrutura de pastas criada em modo **solo**:
+> - `02 Context/me.md` — você (placeholders)
+> - {{liste pastas criadas}}
+>
+> Quando quiser ativar agente IA persistente: rode `/setup` de novo."
+
+**Modo EMPRESA com agente:**
+> "Pronto. Seu vault está rodando em modo **empresa** com **{{nome_ia}}** como agente.
+> - `{{nome_ia}}.md` — hub de identidade do agente
+> - `02 Context/operator.md` — você como operador
+> - `02 Context/organization.md` — a empresa
+> - `02 Context/team.md` — estrutura do time
+> - {{liste outros arquivos criados}}
+> - `Departments/`, `Teams/`, `Onboarding/` — pastas pra escalar
+> - `01 Daily/[data].md` — nota do dia
+>
+> Próximo passo: {{1 ação concreta baseada no P3}}.
+>
+> Quando quiser: `/escrever` (copy), `/landing-page` (página), `/case-study` (cliente), `/ads-google` (campanha), `/assistente` (dia a dia). O {{nome_ia}} fica ativo a partir da próxima sessão."
+
+**Modo EMPRESA sem agente:**
+> "Pronto. Estrutura de pastas criada em modo **empresa**:
+> - `02 Context/operator.md`, `organization.md`, `team.md` (placeholders)
+> - `Departments/`, `Teams/`, `Onboarding/`
+>
+> Quando quiser ativar agente IA persistente: rode `/setup` de novo."
+
+Não liste cada campo. Não parabenize. Direto ao ponto.
+
+---
+
+## Regras gerais
+
+- Uma pergunta por vez — nunca agrupe via AskUserQuestion.
+- Não comente entre perguntas — vá direto pra próxima.
+- Trabalhe em silêncio na Fase 7 — uma confirmação só no final.
+- Nunca deixe `{{PLACEHOLDER}}` visível no arquivo final — sempre preencha ou remova a seção.
+- Se o usuário pular tudo: cria a estrutura mínima do modo escolhido e avisa que ele pode rodar `/setup` de novo depois.
+- Conteúdo dos arquivos sempre em PT-BR (ou no idioma detectado pela seção Idioma). Paths e frontmatter keys ficam intactos.
+- O `modo` é a primeira decisão — não pule. Tudo downstream depende dele.
