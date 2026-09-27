@@ -71,6 +71,8 @@ O Claude monta o vault na pasta atual, instala o time de subagents e te guia pel
 > 2. **Clone o conteúdo do repo NA pasta atual:**
 >    - Se a pasta estiver vazia: `git clone https://github.com/danishiota10-code/segundo-cerebro-kit.git .`
 >    - Se já tiver arquivos: `git clone https://github.com/danishiota10-code/segundo-cerebro-kit.git segundo-cerebro-kit && cd segundo-cerebro-kit`
+>    - **Depois do clone, rode `git remote remove origin`.** O vault é do usuário e não pode ter caminho de volta pro repositório do kit: quem recebe acesso ao kit tem permissão de escrita nele, e um `git push` subiria o vault pessoal dele pra lá.
+>    - Se o clone falhar com "Repository not found" ou pedir senha, é acesso, não erro de digitação: o repositório é privado. Diga ao usuário pra aceitar o convite que chegou no e-mail do GitHub e rodar `gh auth login` no terminal, fora do Claude, e tente de novo.
 > 3. **Detecte o sistema operacional e aja de acordo, SEM perguntar ao usuário.** Você já sabe qual é: o seu contexto de ambiente diz a plataforma em que você roda (`win32` = Windows nativo, `darwin` = macOS, `linux` = Linux ou WSL, e WSL conta como Linux). Não assuma macOS por padrão.
 >    - **macOS, Linux ou WSL:** não troque nada, o `settings.json` do clone já está certo.
 >    - **Windows nativo (PowerShell):** copie `.claude/settings-windows.json` por cima de `.claude/settings.json`. Obrigatório, não preferência: o padrão usa `$CLAUDE_PROJECT_DIR`, que é expansão POSIX e vira string vazia no PowerShell, então todo prompt volta com um erro de Python grudado. Depois rode `python --version`; se só `python3` responder, troque a primeira palavra dos três comandos para `python3`. Declare no seu plano qual sistema detectou e qual arquivo ficou valendo.
@@ -138,6 +140,7 @@ segundo-cerebro-kit/
 
 ```bash
 git clone https://github.com/danishiota10-code/segundo-cerebro-kit.git meu-vault
+cd meu-vault && git remote remove origin
 cd meu-vault
 ```
 
