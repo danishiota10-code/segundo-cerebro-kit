@@ -279,6 +279,75 @@ def main():
         finally:
             note.restore()
 
+    # ---- daily cortado pelo fim e saida do Codex --------------------------
+    # Roda o session-start num vault de mentira: daily longo, com a sessao mais
+    # nova no fim. O hook tem que guardar o fim (era o comeco, e a ultima
+    # conversa do dia sumia).
+    import tempfile
+    tmp = Path(tempfile.mkdtemp(prefix="aios-test-"))
+    try:
+        (tmp / ".claude" / "hooks").mkdir(parents=True)
+        shutil.copy2(HOOKS_DIR / "session-start.py", tmp / ".claude" / "hooks" / "session-start.py")
+        (tmp / "02 Context").mkdir()
+        (tmp / "02 Context" / "me.md").write_text("Nome: Teste\n", encoding="utf-8")
+        (tmp / "01 Daily").mkdir()
+        longo = "SESSAO-VELHA\n" + ("x" * 5000) + "\nSESSAO-NOVA\n"
+        (tmp / "01 Daily" / "2000-01-01.md").write_text(longo, encoding="utf-8")
+        start = tmp / ".claude" / "hooks" / "session-start.py"
+
+        _, out, _ = run_hook(start, {"source": "startup"})
+        check(
+            "daily longo: chega a sessao mais nova",
+            "SESSAO-NOVA" in out and "SESSAO-VELHA" not in out,
+            "fim presente" if "SESSAO-NOVA" in out else "o fim do daily foi cortado",
+        )
+
+        proc = subprocess.run(
+            [sys.executable, str(start), "--codex"],
+            input=json.dumps({"source": "startup"}),
+            capture_output=True, text=True, timeout=30,
+        )
+        try:
+            env = json.loads(proc.stdout)
+            ctx = env["hookSpecificOutput"]["additionalContext"]
+            ok = env["hookSpecificOutput"]["hookEventName"] == "SessionStart" and "Nome: Teste" in ctx
+            detalhe = "envelope JSON com o me.md dentro"
+        except Exception as exc:
+            ok, detalhe = False, "saida nao e o envelope do Codex: " + str(exc)
+        check("codex: session-start --codex devolve JSON", ok and proc.returncode == 0, detalhe)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+    # ---- Codex: hooks.json aponta pros scripts certos ----------------------
+    codex_hooks = VAULT / ".codex" / "hooks.json"
+    try:
+        data = json.loads(codex_hooks.read_text(encoding="utf-8"))
+        cmds = {
+            ev: " ".join(h.get("command", "") for g in groups for h in g.get("hooks", []))
+            for ev, groups in data.get("hooks", {}).items()
+        }
+        ok = (
+            "session-start.py" in cmds.get("SessionStart", "")
+            and "--codex" in cmds.get("SessionStart", "")
+            and "session-capture.py" in cmds.get("Stop", "")
+            and set(cmds) <= {"SessionStart", "Stop"}
+        )
+        check("codex: hooks.json com SessionStart --codex e Stop", ok, str(sorted(cmds)))
+    except Exception as exc:
+        check("codex: hooks.json valido", False, str(exc))
+
+    # ---- Codex: skills em sincronia com os comandos -----------------------
+    gerar = VAULT / "AIOS" / "scripts" / "gerar-skills-codex.py"
+    if gerar.exists():
+        proc = subprocess.run(
+            [sys.executable, str(gerar), "--check"], capture_output=True, text=True, timeout=30
+        )
+        check(
+            "codex: .agents/skills igual a .claude/commands",
+            proc.returncode == 0,
+            proc.stdout.strip().splitlines()[0] if proc.stdout.strip() else "sem saida",
+        )
+
     # ---- placar -----------------------------------------------------------
     print("")
     passou = sum(1 for _, ok, _ in results if ok)

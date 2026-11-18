@@ -187,6 +187,7 @@ Um hook ligado no evento errado é o defeito mais caro que existe, porque ele ro
 | `/assistente` | Operação diária: resume sessão, revisão diária/semanal, tasks, memória, reunião |
 | `/organizar` | Limpa o vault: roteia notas órfãs, conecta com wikilinks, arquiva redundância |
 | `/importar-contexto` | Traz contexto de outra IA (ChatGPT, Claude, Gemini, Perplexity) |
+| `/atualizar-kit` | Traz a versão nova do kit sem tocar nas suas notas |
 
 ### Escrita e conteúdo
 
@@ -264,6 +265,37 @@ Pra quando você quer só colar no chat sem rodar comando:
    - Roda `/assistente` e pede "revisão semanal" — fecha a semana com clareza
 
 Depois disso, `/assistente` vira o comando principal do dia a dia. Os outros comandos viram especialistas que você chama quando precisa.
+
+---
+
+## Atualizar o kit sem perder nada
+
+Quando o kit ganhar coisa nova, rode `/atualizar-kit` no Claude Code (ou `$atualizar-kit` no Codex). Ele mostra o plano antes de mudar qualquer coisa:
+
+- **Novos:** arquivos que o seu vault ainda não tem. São copiados.
+- **Atualizados:** arquivos do sistema que você nunca editou. São trocados, e a versão antiga vai pra uma pasta `<seu vault>-backup-kit-<data>` ao lado do vault.
+- **Mexidos por você:** arquivos do sistema que você editou. Ele não toca; mostra a diferença e pergunta.
+
+Só mexe em `CLAUDE.md`, `AGENTS.md`, `.claude/`, `.codex/`, `.agents/`, `AIOS/scripts/`, nas regras do `AIOS/` e em `prompts/`. As suas notas, o `me.md`, os dailies, o `AIOS/index.md` e o `AIOS/project-map.md` ficam de fora. Nada é apagado.
+
+**Vault criado antes do `/atualizar-kit` existir?** Cole no Claude:
+
+```text
+Atualiza meu vault com a versão nova do kit https://github.com/danishiota10-code/segundo-cerebro-kit sem mexer nas minhas notas: clona o kit numa pasta temporária fora do vault, roda o AIOS/scripts/atualizar-kit.py de lá com --vault apontando pra este vault, me mostra o plano e só aplica depois do meu ok.
+```
+
+---
+
+## Usar no Codex
+
+O mesmo vault funciona no Codex, da OpenAI. Abra o terminal na pasta do vault e rode `codex`.
+
+- O Codex lê o `AGENTS.md`, que manda ler o `CLAUDE.md`. As regras ficam num lugar só.
+- Na primeira sessão, rode `/hooks` e aprove os dois hooks do vault. São eles que carregam o seu `me.md` e o último daily no começo e pedem pra salvar a sessão no fim.
+- Os comandos viram skills: `$setup`, `$organizar`, `$assistente`... (digite `$` pra ver a lista).
+- Os subagents e a documentação automática do fim de sessão são só do Claude Code.
+
+Testado no macOS. No Windows nativo os hooks do Codex ainda não foram testados; use o WSL.
 
 ---
 

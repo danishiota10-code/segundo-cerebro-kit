@@ -2,7 +2,10 @@
 """
 AI OS Session Start Hook
 
-Injeta o contexto central do vault no inicio de cada sessao do Claude Code.
+Injeta o contexto central do vault no inicio de cada sessao do Claude Code
+e do Codex. O mesmo arquivo serve os dois: com `--codex` a saida vai no
+envelope JSON do SessionStart do Codex (hookSpecificOutput.additionalContext),
+sem ele vai em texto puro, que e o que o Claude Code adiciona ao contexto.
 
 IMPORTANTE: dispara no evento SessionStart. O stdout do SessionStart E injetado
 no contexto do modelo. O evento antigo (PreToolUse) NAO injeta stdout no contexto,
@@ -18,6 +21,7 @@ Regras de robustez:
 Mesmo que este hook falhe (sem python, por exemplo), o agente ainda conecta:
 o CLAUDE.md (sempre carregado pelo Claude Code) instrui a IA a ler estes arquivos.
 """
+import json
 import os
 import sys
 from datetime import date
@@ -40,7 +44,13 @@ VAULT = Path(__file__).resolve().parent.parent.parent
 CHAR_BUDGET = 9000  # margem de seguranca sob o limite de 10k por hook
 
 
-def read_capped(rel_path, limit):
+def read_capped(rel_path, limit, keep="start"):
+    """Le o arquivo e corta em `limit` caracteres.
+
+    keep="start" guarda o comeco (identidade: o mais importante vem primeiro).
+    keep="end" guarda o fim (daily: as sessoes novas sao acrescentadas no fim,
+    e cortar o fim fazia a IA perder justamente a ultima conversa do dia).
+    """
     p = VAULT / rel_path
     if not p.exists():
         return None
@@ -49,7 +59,10 @@ def read_capped(rel_path, limit):
     except Exception:
         return None
     if len(text) > limit:
-        text = text[:limit] + "\n[... truncado, leia o arquivo inteiro se precisar ...]"
+        if keep == "end":
+            text = "[... inicio cortado, leia o arquivo inteiro se precisar ...]\n" + text[-limit:]
+        else:
+            text = text[:limit] + "\n[... truncado, leia o arquivo inteiro se precisar ...]"
     return text
 
 
@@ -112,7 +125,7 @@ for rel, label, lim in identity:
 # 2. Ultima sessao (continuidade)
 ld = latest_daily()
 if ld:
-    txt = read_capped(ld.relative_to(VAULT).as_posix(), 2000)
+    txt = read_capped(ld.relative_to(VAULT).as_posix(), 2000, keep="end")
     if txt:
         add(f"--- Ultima Sessao ({ld.stem}) ---\n{txt}\n")
 
@@ -133,4 +146,16 @@ add(
     f"ou em `03 Intelligence/decisions/` conforme trabalha.\n"
 )
 
-sys.stdout.write("\n".join(parts))
+context = "\n".join(parts)
+if "--codex" in sys.argv[1:]:
+    # O Codex le texto puro como contexto tambem, mas um texto que comeca com
+    # "[AI OS ..." parece um array JSON pro parser dele. O envelope explicito
+    # evita a ambiguidade.
+    json.dump(
+        {"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": context}},
+        sys.stdout,
+        ensure_ascii=True,
+    )
+    sys.stdout.write("\n")
+else:
+    sys.stdout.write(context)

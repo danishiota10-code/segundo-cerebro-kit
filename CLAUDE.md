@@ -8,15 +8,20 @@ Leia no início de cada sessão. Não anuncie que está lendo. Apenas absorva e 
 
 ## Session Startup (faça na primeira mensagem)
 
-Leia estes arquivos no começo de cada sessão. Não anuncie, só absorva e responda:
+Não anuncie que está lendo, só absorva e responda.
+
+**Chegam sozinhos**, pelo hook `SessionStart`, em toda conversa nova:
 
 1. `02 Context/me.md` (modo solo) **ou** `02 Context/operator.md` + `organization.md` (modo empresa). Quem é o usuário.
 2. A nota mais recente em `01 Daily/`. O que aconteceu na sessão anterior.
+
+Se esse bloco não veio (por exemplo, Python não está instalado na máquina), leia os dois você mesmo antes de responder. É isso que garante que você sempre conecta ao vault, com ou sem hook.
+
+**Leia quando precisar** (o hook lista os mesmos como "sob demanda"):
+
 3. `AIOS/operating-rules.md`. Como você opera neste vault.
 4. `AIOS/index.md`. Skills e comandos disponíveis.
 5. `knowledge/index.md`. Conhecimento permanente.
-
-O hook `SessionStart` já injeta a identidade e o último daily no contexto automaticamente. Se você não recebeu esse bloco (por exemplo, Python não está instalado na máquina), leia os arquivos acima você mesmo antes de responder. É isso que garante que você sempre conecta ao vault, com ou sem hook.
 
 ---
 
@@ -79,7 +84,7 @@ Tabela completa em `AIOS/knowledge-routing.md`.
 
 Detalhes em `AIOS/operating-rules.md`. Resumo:
 
-- Leia os arquivos do Session Startup sempre na primeira mensagem
+- Na primeira mensagem, confira que tem o `me.md` e o último daily (do hook ou lidos por você)
 - Use `[[wikilinks]]` pra TODA referência interna — nunca markdown links
 - Frontmatter YAML em todo arquivo: `type`, `date`, `status`, `tags`
 - **Nunca peça permissão pra salvar** — salve e informe onde
@@ -97,6 +102,7 @@ Detalhes em `AIOS/operating-rules.md`. Resumo:
 - `/assistente`: operação diária, resume sessão, daily/weekly review, tasks, memória, reunião
 - `/organizar`: limpa o vault, roteia notas órfãs, conecta com wikilinks, arquiva redundância
 - `/importar-contexto`: trazer contexto de outra IA depois do setup inicial
+- `/atualizar-kit`: traz a versão nova do kit (comandos, hooks, regras) sem tocar nas suas notas
 
 **Escrita e conteúdo:**
 - `/escrever` — Texto curto na sua voz — 3 variações
@@ -138,6 +144,16 @@ python .claude/hooks/test-hooks.py      # Windows
 Roda os hooks de verdade e mede o que eles devolvem. Sai com código `0` se tudo passou e `1` se qualquer caso falhou. **O código de saída é a prova.** "Passou" impresso na tela não vale nada se o exit for `1`, então confere o exit e não a mensagem.
 
 O caso mais importante é o `canal ok`: ele executa cada hook configurado e reprova qualquer um que escreva em `stdout` num evento que não entrega `stdout` pra IA. É o caso que teria pego os dois bugs que este kit já teve. Se você mexer no `settings.json` e apontar um hook pro evento errado, ele fica vermelho na hora.
+
+---
+
+## Codex
+
+O vault funciona também no Codex (OpenAI). Ele não lê este arquivo direto: lê o `AGENTS.md`, que manda ler este aqui.
+
+- **Hooks:** `.codex/hooks.json` chama os mesmos scripts de `.claude/hooks/`. O de início roda com `--codex`, que devolve o contexto no formato JSON que o Codex pede; o de salvar roda no `Stop`, como no Claude Code. Na primeira sessão o Codex pede pra aprovar os hooks: rode `/hooks` e aprove.
+- **Comandos:** viram skills em `.agents/skills/`, chamadas com `$` (`$setup`, `$organizar`). São geradas de `.claude/commands/` por `python3 AIOS/scripts/gerar-skills-codex.py`. **Mudou um comando, rode o script.** O `test-hooks.py` reprova se as duas pastas saírem de sincronia.
+- **Subagents** (`.claude/agents/`) e a documentação automática do `SessionEnd` são só do Claude Code.
 
 ---
 
