@@ -71,7 +71,7 @@ O Claude monta o vault na pasta atual, instala o time de subagents e te guia pel
 > 2. **Clone o conteúdo do repo NA pasta atual:**
 >    - Se a pasta estiver vazia: `git clone https://github.com/danishiota10-code/segundo-cerebro-kit.git .`
 >    - Se já tiver arquivos: `git clone https://github.com/danishiota10-code/segundo-cerebro-kit.git segundo-cerebro-kit && cd segundo-cerebro-kit`
->    - **Codex:** o sandbox padrão do Codex bloqueia a internet, e o clone falha com "Could not resolve host". Peça a aprovação do usuário pra rodar o `git clone` com acesso à rede (fora do sandbox). **Nunca use uma cópia do kit que já esteja no computador** nem monte o vault de outro jeito: cópia local pode ser velha. Se não der pra clonar, pare e diga o porquê. Também não crie nem reescreva o `AGENTS.md`: o kit já traz o dele.
+>    - **Codex:** o sandbox padrão do Codex bloqueia a internet, e o clone falha com "Could not resolve host". Peça a aprovação do usuário pra rodar o `git clone` com acesso à rede. Se a aprovação for recusada ou nem puder ser pedida, **não peça ZIP e não use cópia do kit que já esteja no computador** (pode ser velha): mande o usuário sair do Codex e seguir a seção "Instalar pelo Codex" deste README, que clona pelo terminal. Também não crie nem reescreva o `AGENTS.md`: o kit já traz o dele.
 >    - **Depois do clone, rode `git remote remove origin`.** O vault é do usuário e não pode ter caminho de volta pro repositório do kit: quem recebe acesso ao kit tem permissão de escrita nele, e um `git push` subiria o vault pessoal dele pra lá.
 >    - Se o clone falhar com "Repository not found" ou pedir senha, é acesso, não erro de digitação: o repositório é privado. Diga ao usuário pra aceitar o convite que chegou no e-mail do GitHub e rodar `gh auth login` no terminal, fora do Claude, e tente de novo.
 > 3. **Detecte o sistema operacional e aja de acordo, SEM perguntar ao usuário.** Você já sabe qual é: o seu contexto de ambiente diz a plataforma em que você roda (`win32` = Windows nativo, `darwin` = macOS, `linux` = Linux ou WSL, e WSL conta como Linux). Não assuma macOS por padrão.
@@ -85,6 +85,22 @@ O Claude monta o vault na pasta atual, instala o time de subagents e te guia pel
 >    - **Codex:** diga também que, na próxima vez que abrir o `codex` nesta pasta, é pra rodar `/hooks` e aprovar os dois hooks do vault (início e fim de sessão). Sem isso o Codex não carrega o `me.md` nem o daily. Os comandos aqui são `$setup`, `$organizar`, `$assistente`.
 >
 > Avise no começo que vai pedir permissão pra rodar `git`, e que é só aceitar.
+
+---
+
+## Instalar pelo Codex
+
+O Codex costuma bloquear a internet dentro da conversa, então o clone vai pelo terminal, antes de abrir o Codex. No terminal (fora do Codex), cola:
+
+```bash
+git clone https://github.com/danishiota10-code/segundo-cerebro-kit.git ~/segundo-cerebro && cd ~/segundo-cerebro && git remote remove origin && codex
+```
+
+Isso baixa o kit pra pasta `~/segundo-cerebro`, corta o vínculo com o GitHub (o vault é seu) e abre o Codex dentro dela. Lá dentro:
+
+1. Se ele perguntar se confia na pasta, responda que sim.
+2. Rode `/hooks` e aprove os dois hooks do vault. São eles que carregam o seu `me.md` e o último daily e pedem pra salvar a sessão.
+3. Digite `$setup` pra personalizar o vault.
 
 ---
 
