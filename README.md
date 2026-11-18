@@ -84,7 +84,7 @@ O Claude monta o vault na pasta atual, instala o time de subagents e te guia pel
 > 6. **Rode o onboarding LENDO o arquivo, não via slash command.** Leia `.claude/commands/setup.md` (na pasta do vault) e execute aquele fluxo de entrevista diretamente na conversa: faça as perguntas, preencha `02 Context/me.md` com as respostas reais. Você está executando o conteúdo do arquivo, não invocando `/setup`.
 > 7. **Prove que funcionou:** leia o `me.md` recém-preenchido e resuma de volta pro usuário quem ele é, do jeito que o `vault-keeper` faria.
 > 8. **Oriente o próximo passo:** diga pro usuário, daqui pra frente, abrir o Claude Code E o Obsidian **nesta mesma pasta** — é onde os hooks de documentação automática e os comandos do vault ficam ativos.
->    - **Codex:** diga também que o vault funciona no Codex: é só rodar `codex` nesta pasta e, na primeira vez, `/hooks` e aprovar os dois hooks do vault (início e fim de sessão). Sem isso o Codex não carrega o `me.md` nem o daily. No Codex os comandos são `$organizar`, `$assistente`...
+>    - **Codex:** diga também que o vault funciona no Codex: é só rodar `codex` nesta pasta e, na primeira vez, confiar na pasta e aprovar os dois hooks do vault no aviso "Hooks need review" (ou depois, com `/hooks`). Sem isso o Codex não carrega o `me.md` nem o daily. No Codex os comandos são `$organizar`, `$assistente`...
 >
 > Avise no começo que vai pedir permissão pra rodar `git`, e que é só aceitar.
 
@@ -302,8 +302,8 @@ codex
 
 Na primeira vez:
 
-1. Se ele perguntar se confia na pasta, responda que sim.
-2. Rode `/hooks` e aprove os dois hooks do vault. São eles que carregam o seu `me.md` e o último daily no começo e pedem pra salvar a sessão no fim. Sem essa aprovação o Codex não sabe quem você é.
+1. **"Trust this folder?"**: escolha **Trust and continue**.
+2. **"Hooks need review"**: escolha **Trust all and continue** (ou **Review hooks** pra ver antes; lá dentro, `t` aprova todos). São os dois hooks do vault: o de início ("Carregando o seu segundo cérebro") carrega o seu `me.md` e o último daily, e o de fim pede pra salvar a sessão. Sem essa aprovação o Codex não sabe quem você é. Se pulou o aviso, rode `/hooks` depois.
 
 Como funciona:
 
