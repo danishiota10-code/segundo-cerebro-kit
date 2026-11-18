@@ -34,7 +34,7 @@ Se for editar esse comando na mão, **copia ele exatamente**. O `run_name='__mai
 
 ---
 
-## Começar em 1 minuto (cola o link no Claude ou no Codex)
+## Começar em 1 minuto (cola o link no Claude)
 
 Não precisa saber terminal nem git. Faz assim:
 
@@ -52,6 +52,8 @@ Criar meu segundo cérebro com esse repositório: https://github.com/danishiota1
 > A mensagem precisa ter SEMPRE o link junto. "Criar meu segundo cérebro" sozinho não basta — o Claude precisa do link.
 
 O Claude monta o vault na pasta atual, instala o time de subagents e te guia pela personalização. Em poucos minutos teu sistema tá rodando.
+
+**Quer usar o Codex também?** Instala com o Claude, como acima, e depois abre o Codex na mesma pasta. Os dois leem as mesmas notas, o mesmo `me.md` e o mesmo daily. Passo a passo em [Usar no Codex](#usar-no-codex).
 
 ---
 
@@ -71,7 +73,7 @@ O Claude monta o vault na pasta atual, instala o time de subagents e te guia pel
 > 2. **Clone o conteúdo do repo NA pasta atual:**
 >    - Se a pasta estiver vazia: `git clone https://github.com/danishiota10-code/segundo-cerebro-kit.git .`
 >    - Se já tiver arquivos: `git clone https://github.com/danishiota10-code/segundo-cerebro-kit.git segundo-cerebro-kit && cd segundo-cerebro-kit`
->    - **Codex:** o sandbox padrão do Codex bloqueia a internet, e o clone falha com "Could not resolve host". Peça a aprovação do usuário pra rodar o `git clone` com acesso à rede. Se a aprovação for recusada ou nem puder ser pedida, **não peça ZIP e não use cópia do kit que já esteja no computador** (pode ser velha): mande o usuário sair do Codex e seguir a seção "Instalar pelo Codex" deste README, que clona pelo terminal. Também não crie nem reescreva o `AGENTS.md`: o kit já traz o dele.
+>    - **Codex:** o sandbox padrão do Codex bloqueia a internet, e o clone falha com "Could not resolve host". Peça a aprovação do usuário pra rodar o `git clone` com acesso à rede. Se a aprovação for recusada ou nem puder ser pedida, **não peça ZIP e não use cópia do kit que já esteja no computador** (pode ser velha): mande o usuário sair do Codex e seguir "Sem Claude Code" na seção "Usar no Codex" deste README, que clona pelo terminal. O caminho recomendado é instalar com o Claude Code e só depois abrir o Codex na pasta. Também não crie nem reescreva o `AGENTS.md`: o kit já traz o dele.
 >    - **Depois do clone, rode `git remote remove origin`.** O vault é do usuário e não pode ter caminho de volta pro repositório do kit: quem recebe acesso ao kit tem permissão de escrita nele, e um `git push` subiria o vault pessoal dele pra lá.
 >    - Se o clone falhar com "Repository not found" ou pedir senha, é acesso, não erro de digitação: o repositório é privado. Diga ao usuário pra aceitar o convite que chegou no e-mail do GitHub e rodar `gh auth login` no terminal, fora do Claude, e tente de novo.
 > 3. **Detecte o sistema operacional e aja de acordo, SEM perguntar ao usuário.** Você já sabe qual é: o seu contexto de ambiente diz a plataforma em que você roda (`win32` = Windows nativo, `darwin` = macOS, `linux` = Linux ou WSL, e WSL conta como Linux). Não assuma macOS por padrão.
@@ -82,25 +84,9 @@ O Claude monta o vault na pasta atual, instala o time de subagents e te guia pel
 > 6. **Rode o onboarding LENDO o arquivo, não via slash command.** Leia `.claude/commands/setup.md` (na pasta do vault) e execute aquele fluxo de entrevista diretamente na conversa: faça as perguntas, preencha `02 Context/me.md` com as respostas reais. Você está executando o conteúdo do arquivo, não invocando `/setup`.
 > 7. **Prove que funcionou:** leia o `me.md` recém-preenchido e resuma de volta pro usuário quem ele é, do jeito que o `vault-keeper` faria.
 > 8. **Oriente o próximo passo:** diga pro usuário, daqui pra frente, abrir o Claude Code E o Obsidian **nesta mesma pasta** — é onde os hooks de documentação automática e os comandos do vault ficam ativos.
->    - **Codex:** diga também que, na próxima vez que abrir o `codex` nesta pasta, é pra rodar `/hooks` e aprovar os dois hooks do vault (início e fim de sessão). Sem isso o Codex não carrega o `me.md` nem o daily. Os comandos aqui são `$setup`, `$organizar`, `$assistente`.
+>    - **Codex:** diga também que o vault funciona no Codex: é só rodar `codex` nesta pasta e, na primeira vez, `/hooks` e aprovar os dois hooks do vault (início e fim de sessão). Sem isso o Codex não carrega o `me.md` nem o daily. No Codex os comandos são `$organizar`, `$assistente`...
 >
 > Avise no começo que vai pedir permissão pra rodar `git`, e que é só aceitar.
-
----
-
-## Instalar pelo Codex
-
-O Codex costuma bloquear a internet dentro da conversa, então o clone vai pelo terminal, antes de abrir o Codex. No terminal (fora do Codex), cola:
-
-```bash
-git clone https://github.com/danishiota10-code/segundo-cerebro-kit.git ~/segundo-cerebro && cd ~/segundo-cerebro && git remote remove origin && codex
-```
-
-Isso baixa o kit pra pasta `~/segundo-cerebro`, corta o vínculo com o GitHub (o vault é seu) e abre o Codex dentro dela. Lá dentro:
-
-1. Se ele perguntar se confia na pasta, responda que sim.
-2. Rode `/hooks` e aprove os dois hooks do vault. São eles que carregam o seu `me.md` e o último daily e pedem pra salvar a sessão.
-3. Digite `$setup` pra personalizar o vault.
 
 ---
 
@@ -306,15 +292,36 @@ Atualiza meu vault com a versão nova do kit https://github.com/danishiota10-cod
 
 ## Usar no Codex
 
-O mesmo vault funciona no Codex, da OpenAI. Abra o terminal na pasta do vault e rode `codex`.
+O mesmo vault funciona no Codex, da OpenAI. **O caminho recomendado: instale com o Claude Code** ([Começar em 1 minuto](#começar-em-1-minuto-cola-o-link-no-claude)) **e depois abra o Codex na mesma pasta.** Os dois leem as mesmas notas, então dá pra alternar entre eles sem perder nada.
+
+No terminal, na pasta do vault:
+
+```bash
+codex
+```
+
+Na primeira vez:
+
+1. Se ele perguntar se confia na pasta, responda que sim.
+2. Rode `/hooks` e aprove os dois hooks do vault. São eles que carregam o seu `me.md` e o último daily no começo e pedem pra salvar a sessão no fim. Sem essa aprovação o Codex não sabe quem você é.
+
+Como funciona:
 
 - O Codex lê o `AGENTS.md`, que manda ler o `CLAUDE.md`. As regras ficam num lugar só.
-- Na primeira sessão, rode `/hooks` e aprove os dois hooks do vault. São eles que carregam o seu `me.md` e o último daily no começo e pedem pra salvar a sessão no fim.
-- Os comandos viram skills: `$setup`, `$organizar`, `$assistente`... (digite `$` pra ver a lista).
+- Os comandos viram skills: `$organizar`, `$assistente`, `$atualizar-kit`... (digite `$` pra ver a lista).
 - Os subagents e a documentação automática do fim de sessão são só do Claude Code.
 
 Testado no macOS. No Windows nativo os hooks do Codex ainda não foram testados; use o WSL.
 
+### Sem Claude Code
+
+O Codex costuma bloquear a internet dentro da conversa, então o kit vai pelo terminal, antes de abrir o Codex. No terminal (fora do Codex), cola:
+
+```bash
+git clone https://github.com/danishiota10-code/segundo-cerebro-kit.git ~/segundo-cerebro && cd ~/segundo-cerebro && git remote remove origin && codex
+```
+
+Isso baixa o kit pra pasta `~/segundo-cerebro`, corta o vínculo com o GitHub (o vault é seu) e abre o Codex dentro dela. Faça os dois passos da primeira vez acima e digite `$setup` pra personalizar o vault.
 ---
 
 ## Quando o grafo do Obsidian bagunçar
